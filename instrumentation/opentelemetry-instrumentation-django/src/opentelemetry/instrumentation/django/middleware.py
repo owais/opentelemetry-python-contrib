@@ -25,7 +25,11 @@ from opentelemetry.instrumentation.wsgi import (
 )
 from opentelemetry.propagate import extract
 from opentelemetry.trace import SpanKind, get_tracer, use_span
-from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
+from opentelemetry.util.http import (
+    get_excluded_urls,
+    get_traced_request_attrs,
+    get_trace_response_headers,
+)
 
 try:
     from django.core.urlresolvers import (  # pylint: disable=no-name-in-module
@@ -156,18 +160,23 @@ class _DjangoMiddleware(MiddlewareMixin):
         if self._excluded_urls.url_disabled(request.build_absolute_uri("?")):
             return response
 
-        if (
-            self._environ_activation_key in request.META.keys()
-            and self._environ_span_key in request.META.keys()
-        ):
+        span = request.META.pop(self._environ_span_key, None)
+        if span and self._environ_activation_key in request.META.keys():
+            # record span attributes from response
             add_response_attributes(
-                request.META[self._environ_span_key],
+                span,
                 "{} {}".format(response.status_code, response.reason_phrase),
                 response,
             )
 
-            request.META.pop(self._environ_span_key)
+            # inject trace response headers
+            for header, value in get_trace_response_headers(span):
+                old_value = response.get(header, "")
+                if old_value:
+                    value = "{0}, {1}".format(old_value, value)
+                response[header] = value
 
+            # record any exceptions raised while processing the request
             exception = request.META.pop(self._environ_exception_key, None)
             if exception:
                 request.META[self._environ_activation_key].__exit__(

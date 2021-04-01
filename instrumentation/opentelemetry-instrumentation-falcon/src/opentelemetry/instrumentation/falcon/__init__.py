@@ -59,7 +59,12 @@ from opentelemetry.instrumentation.utils import (
 from opentelemetry.propagate import extract
 from opentelemetry.trace.status import Status
 from opentelemetry.util._time import _time_ns
-from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
+from opentelemetry.util.http import (
+    HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS,
+    traceresponse_header_from_span,
+    get_excluded_urls,
+    get_traced_request_attrs,
+)
 
 _logger = getLogger(__name__)
 
@@ -139,7 +144,9 @@ class _InstrumentedFalconAPI(falcon.API):
             return super().__call__(env, _start_response)
         except Exception as exc:
             activation.__exit__(
-                type(exc), exc, getattr(exc, "__traceback__", None),
+                type(exc),
+                exc,
+                getattr(exc, "__traceback__", None),
             )
             context.detach(token)
             raise
@@ -148,9 +155,15 @@ class _InstrumentedFalconAPI(falcon.API):
 class _TraceMiddleware:
     # pylint:disable=R0201,W0613
 
-    def __init__(self, tracer=None, traced_request_attrs=None):
+    def __init__(
+        self,
+        tracer=None,
+        traced_request_attrs=None,
+        inject_traceresposne_header=False,
+    ):
         self.tracer = tracer
         self._traced_request_attrs = _traced_request_attrs
+        self._inject_traceresponse_header = inject_traceresposne_header
 
     def process_request(self, req, resp):
         span = req.env.get(_ENVIRON_SPAN_KEY)
@@ -180,6 +193,16 @@ class _TraceMiddleware:
         span = req.env.get(_ENVIRON_SPAN_KEY)
         if not span or not span.is_recording():
             return
+
+        traceresponse_header = traceresponse_header_from_span(span)
+        if traceresponse_header:
+            resp.append_header(
+                HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS,
+                traceresponse_header[0],
+            )
+            resp.append_header(
+                traceresponse_header[0], traceresponse_header[1]
+            )
 
         status = resp.status
         reason = None

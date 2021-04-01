@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from os import environ
 from sys import modules
 from unittest.mock import Mock, patch
 
@@ -25,7 +26,13 @@ from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.test.test_base import TestBase
 from opentelemetry.test.wsgitestutil import WsgiTestBase
 from opentelemetry.trace import SpanKind, StatusCode
-from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
+from opentelemetry.util.http import (
+    get_excluded_urls,
+    get_traced_request_attrs,
+    get_trace_response_headers,
+    HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS,
+    ENV_HTTP_TRACE_RESPONSE_HEADER,
+)
 
 # pylint: disable=import-error
 from .views import (
@@ -34,6 +41,7 @@ from .views import (
     excluded_noarg,
     excluded_noarg2,
     route_span_name,
+    response_header,
     traced,
     traced_template,
 )
@@ -47,6 +55,7 @@ urlpatterns = [
     url(r"^excluded_arg/", excluded),
     url(r"^excluded_noarg/", excluded_noarg),
     url(r"^excluded_noarg2/", excluded_noarg2),
+    url(r"^response_header/", response_header),
     url(r"^span_name/([0-9]{4})/$", route_span_name),
 ]
 _django_instrumentor = DjangoInstrumentor()
@@ -268,3 +277,69 @@ class TestMiddleware(TestBase, WsgiTestBase):
         self.assertEqual(span.attributes["path_info"], "/span_name/1234/")
         self.assertEqual(span.attributes["content_type"], "test/ct")
         self.assertNotIn("non_existing_variable", span.attributes)
+
+    def test_trace_response_header(self):
+        original_env_var = environ.get(ENV_HTTP_TRACE_RESPONSE_HEADER, None)
+        environ.pop(ENV_HTTP_TRACE_RESPONSE_HEADER, None)
+        response = Client().get("/span_name/1234/")
+        self.assertNotIn("Server-Timing", response._headers)
+        self.memory_exporter.clear()
+
+        for header in ["Server-Timing", "traceresponse"]:
+            environ[ENV_HTTP_TRACE_RESPONSE_HEADER] = header
+
+            response = Client().get("/span_name/1234/")
+            span = self.memory_exporter.get_finished_spans()[0]
+            (
+                access_control_header,
+                response_header,
+            ) = get_trace_response_headers(span)
+
+            self.assertIn(header.lower(), response._headers)
+            self.assertEqual(
+                response._headers["access-control-expose-headers"][0],
+                access_control_header[0],
+            )
+            self.assertEqual(
+                response._headers["access-control-expose-headers"][1],
+                access_control_header[1],
+            )
+            self.assertEqual(
+                response._headers[header.lower()][0], response_header[0]
+            )
+            self.assertEqual(
+                response._headers[header.lower()][1], response_header[1]
+            )
+
+            self.memory_exporter.clear()
+            del environ[ENV_HTTP_TRACE_RESPONSE_HEADER]
+
+        environ[ENV_HTTP_TRACE_RESPONSE_HEADER] = "Server-Timing"
+        response = Client().get("/response_header/")
+        span = self.memory_exporter.get_finished_spans()[0]
+        access_control_header, response_header = get_trace_response_headers(
+            span
+        )
+
+        self.assertIn("server-timing", response._headers)
+        self.assertEqual(
+            response._headers["access-control-expose-headers"][0],
+            access_control_header[0],
+        )
+        self.assertEqual(
+            response._headers["access-control-expose-headers"][1],
+            "X-Test-Header, Server-Timing",
+        )
+        self.assertEqual(
+            response._headers["server-timing"][0], response_header[0]
+        )
+        self.assertEqual(
+            response._headers["server-timing"][1],
+            "abc; val=1, " + response_header[1],
+        )
+
+        self.memory_exporter.clear()
+        del environ[ENV_HTTP_TRACE_RESPONSE_HEADER]
+
+        if original_env_var:
+            environ[ENV_HTTP_TRACE_RESPONSE_HEADER] = original_env_var

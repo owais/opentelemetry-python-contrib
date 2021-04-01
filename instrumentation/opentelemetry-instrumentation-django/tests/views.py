@@ -1,5 +1,7 @@
 from django.http import HttpResponse
 
+from opentelemetry.util.http import HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS
+
 
 def traced(request):  # pylint: disable=unused-argument
     return HttpResponse()
@@ -29,3 +31,10 @@ def route_span_name(
     request, *args, **kwargs
 ):  # pylint: disable=unused-argument
     return HttpResponse()
+
+
+def response_header(request):  # pylint: disable=unused-argument
+    response = HttpResponse()
+    response["Server-Timing"] = "abc; val=1"
+    response[HTTP_HEADER_ACCESS_CONTROL_EXPOSE_HEADERS] = "X-Test-Header"
+    return response

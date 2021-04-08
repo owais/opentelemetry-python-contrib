@@ -23,10 +23,13 @@ from .pyramid_base_test import InstrumentationTest
 
 
 class TestAutomatic(InstrumentationTest, TestBase, WsgiTestBase):
+    _request_hook = None
+    _response_hook = None
+
     def setUp(self):
         super().setUp()
 
-        PyramidInstrumentor().instrument()
+        PyramidInstrumentor().instrument(request_hook=self.request_hook, response_hook=self.response_hook)
 
         self.config = Configurator()
 
@@ -36,6 +39,14 @@ class TestAutomatic(InstrumentationTest, TestBase, WsgiTestBase):
         super().tearDown()
         with self.disable_logging():
             PyramidInstrumentor().uninstrument()
+
+    def request_hook(self, *args, **kwargs):
+        if self._request_hook:
+            self._request_hook(*args, **kwargs)
+
+    def response_hook(self, *args, **kwargs):
+        if self._response_hook:
+            self._response_hook(*args, **kwargs)
 
     def test_uninstrument(self):
         # pylint: disable=access-member-before-definition
@@ -65,6 +76,7 @@ class TestAutomatic(InstrumentationTest, TestBase, WsgiTestBase):
         self.assertEqual([b"Hello: 123"], list(resp.response))
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
+        self.assertEqual(span_list[0].name, "/hello/{helloid}")
 
         PyramidInstrumentor().uninstrument()
 
@@ -77,3 +89,30 @@ class TestAutomatic(InstrumentationTest, TestBase, WsgiTestBase):
         self.assertEqual([b"Hello: 123"], list(resp.response))
         span_list = self.memory_exporter.get_finished_spans()
         self.assertEqual(len(span_list), 1)
+
+    def test_hooks(self):
+        def request_hook(span, request):
+            span.update_name("name from hook")
+
+        def response_hook(span, request, response):
+            span.set_attribute('from_hook', 'hello otel')
+            response.headers.add('hook-header', 'hello client')
+
+        self._request_hook = request_hook
+        self._response_hook = response_hook
+
+        tween_list = "pyramid.tweens.excview_tween_factory"
+        config = Configurator(settings={"pyramid.tweens": tween_list })
+        self._common_initialization(config)
+        resp = self.client.get("/hello/123")
+        self.assertEqual(resp.headers['hook-header'], 'hello client')
+        self.assertEqual(200, resp.status_code)
+        self.assertEqual([b"Hello: 123"], list(resp.response))
+        span_list = self.memory_exporter.get_finished_spans()
+        self.assertEqual(len(span_list), 1)
+        span = span_list[0] 
+        self.assertEqual(span.name, "name from hook")
+        self.assertIn('from_hook', span.attributes)
+        self.assertIn(span.attributes['from_hook'], 'hello otel')
+
+        self._request_hook = self._response_hook = None

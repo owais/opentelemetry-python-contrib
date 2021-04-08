@@ -79,6 +79,7 @@ API
 """
 
 import typing
+from functools import partial
 
 from pyramid.config import Configurator
 from pyramid.path import caller_package
@@ -97,7 +98,7 @@ from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.trace import TracerProvider, get_tracer
 
 
-def _traced_init(wrapped, instance, args, kwargs):
+def _traced_init(request_hook, response_hook, wrapped, instance, args, kwargs):
     settings = kwargs.get("settings", {})
     tweens = aslist(settings.get("pyramid.tweens", []))
 
@@ -120,6 +121,8 @@ def _traced_init(wrapped, instance, args, kwargs):
         # instead of the desired package (the caller)
         kwargs["package"] = caller_package(level=3)
 
+    settings["_otel_request_hook"] = request_hook
+    settings["_otel_response_hook"] = response_hook
     wrapped(*args, **kwargs)
     instance.include("opentelemetry.instrumentation.pyramid.callbacks")
 
@@ -129,7 +132,13 @@ class PyramidInstrumentor(BaseInstrumentor):
         """Integrate with Pyramid Python library.
         https://docs.pylonsproject.org/projects/pyramid/en/latest/
         """
-        _wrap("pyramid.config", "Configurator.__init__", _traced_init)
+        request_hook = kwargs.get("request_hook", None)
+        response_hook = kwargs.get("response_hook", None)
+        _wrap(
+            "pyramid.config",
+            "Configurator.__init__",
+            partial(_traced_init, request_hook, response_hook),
+        )
 
     def _uninstrument(self, **kwargs):
         """"Disable Pyramid instrumentation"""

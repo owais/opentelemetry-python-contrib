@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from functools import partial
 from logging import getLogger
 
 from pyramid.events import BeforeTraversal
@@ -34,6 +35,8 @@ _ENVIRON_SPAN_KEY = "opentelemetry-pyramid.span_key"
 _ENVIRON_ACTIVATION_KEY = "opentelemetry-pyramid.activation_key"
 _ENVIRON_ENABLED_KEY = "opentelemetry-pyramid.tracing_enabled_key"
 _ENVIRON_TOKEN = "opentelemetry-pyramid.token"
+_REQUEST_HOOK_KEY = "opentelemetry-pyramid.request_hook"
+_RESPONSE_HOOK_KEY = "opentelemetry-pyramid.response_hook"
 
 _logger = getLogger(__name__)
 
@@ -42,9 +45,14 @@ _excluded_urls = get_excluded_urls("PYRAMID")
 
 
 def includeme(config):
+    settings = config.get_settings()
     config.add_settings({SETTING_TRACE_ENABLED: True})
-
-    config.add_subscriber(_before_traversal, BeforeTraversal)
+    before_traversal = partial(
+        _before_traversal,
+        request_hook=settings.pop("_otel_request_hook", None),
+        response_hook=settings.pop("_otel_response_hook", None),
+    )
+    config.add_subscriber(before_traversal, BeforeTraversal)
     _insert_tween(config)
 
 
@@ -58,7 +66,7 @@ def _insert_tween(config):
         config.add_tween(TWEEN_NAME, over=EXCVIEW)
 
 
-def _before_traversal(event):
+def _before_traversal(event, request_hook=None, response_hook=None):
     request = event.request
     request_environ = request.environ
     span_name = otel_wsgi.get_default_span_name(request_environ)
@@ -104,6 +112,11 @@ def _before_traversal(event):
     request_environ[_ENVIRON_ACTIVATION_KEY] = activation
     request_environ[_ENVIRON_SPAN_KEY] = span
     request_environ[_ENVIRON_TOKEN] = token
+    request_environ[_RESPONSE_HOOK_KEY] = response_hook
+    request.environ[_RESPONSE_HOOK_KEY] = response_hook
+
+    if request_hook:
+        request_hook(span, request_environ)
 
 
 def trace_tween_factory(handler, registry):
@@ -121,6 +134,7 @@ def trace_tween_factory(handler, registry):
 
     # make a request tracing function
     def trace_tween(request):
+
         # pylint: disable=E1101
         if _excluded_urls.url_disabled(request.url):
             request.environ[_ENVIRON_ENABLED_KEY] = False
@@ -130,6 +144,7 @@ def trace_tween_factory(handler, registry):
         request.environ[_ENVIRON_ENABLED_KEY] = True
         request.environ[_ENVIRON_STARTTIME_KEY] = _time_ns()
 
+        response_or_exception = None
         try:
             response = handler(request)
             response_or_exception = response
@@ -151,11 +166,16 @@ def trace_tween_factory(handler, registry):
                     "PyramidInstrumentor().instrument_config(config) is called"
                 )
             elif enabled:
-                otel_wsgi.add_response_attributes(
-                    span,
-                    response_or_exception.status,
-                    response_or_exception.headers,
-                )
+                if response_or_exception:
+                    otel_wsgi.add_response_attributes(
+                        span,
+                        response_or_exception.status,
+                        response_or_exception.headers,
+                    )
+
+                response_hook = request.environ.pop(_RESPONSE_HOOK_KEY, None)
+                if response_hook:
+                    response_hook(span, request.environ, response_or_exception)
 
                 activation = request.environ.get(_ENVIRON_ACTIVATION_KEY)
 

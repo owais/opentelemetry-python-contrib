@@ -34,12 +34,14 @@ API
 ---
 """
 
+from typing import Collection
+
 import asyncpg
 import wrapt
 from asyncpg import exceptions
 
 from opentelemetry import trace
-from opentelemetry.instrumentation.asyncpg.version import __version__
+from opentelemetry.instrumentation.asyncpg.package import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.semconv.trace import (
@@ -49,6 +51,8 @@ from opentelemetry.semconv.trace import (
 )
 from opentelemetry.trace import SpanKind
 from opentelemetry.trace.status import Status, StatusCode
+
+from . import package as pkg
 
 _APPLIED = "_opentelemetry_tracer"
 
@@ -98,6 +102,9 @@ class AsyncPGInstrumentor(BaseInstrumentor):
     def __init__(self, capture_parameters=False):
         super().__init__()
         self.capture_parameters = capture_parameters
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get(

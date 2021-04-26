@@ -42,18 +42,22 @@ API
 ---
 """
 
+from typing import Collection
+
 import redis
 from wrapt import ObjectProxy, wrap_function_wrapper
 
 from opentelemetry import trace
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
+from opentelemetry.instrumentation.redis.package import __version__
 from opentelemetry.instrumentation.redis.util import (
     _extract_conn_attributes,
     _format_command_args,
 )
-from opentelemetry.instrumentation.redis.version import __version__
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.semconv.trace import SpanAttributes
+
+from . import package as pkg
 
 _DEFAULT_SERVICE = "redis"
 
@@ -109,6 +113,9 @@ class RedisInstrumentor(BaseInstrumentor):
     """An instrumentor for Redis
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         tracer_provider = kwargs.get(

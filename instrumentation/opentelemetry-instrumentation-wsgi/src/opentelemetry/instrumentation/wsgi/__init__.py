@@ -60,7 +60,7 @@ import wsgiref.util as wsgiref_util
 
 from opentelemetry import context, trace
 from opentelemetry.instrumentation.utils import http_status_to_status_code
-from opentelemetry.instrumentation.wsgi.version import __version__
+from opentelemetry.instrumentation.wsgi.package import __version__
 from opentelemetry.propagate import extract
 from opentelemetry.propagators.textmap import Getter
 from opentelemetry.semconv.trace import SpanAttributes

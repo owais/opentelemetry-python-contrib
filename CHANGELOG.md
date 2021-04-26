@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased](https://github.com/open-telemetry/opentelemetry-python-contrib/compare/v0.200...HEAD)
 
 ### Changed
+- Instrumentation packages don't specify the libraries they instrument as dependencies
+  anymore. Instead, they verify the correct version of libraries are installed at runtime.
+  ([#475](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/475))
 - `opentelemetry-propagator-ot-trace` Use `TraceFlags` object in `extract`
   ([#472](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/472))
 

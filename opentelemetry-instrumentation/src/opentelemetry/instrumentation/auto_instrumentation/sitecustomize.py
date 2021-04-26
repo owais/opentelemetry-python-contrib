@@ -53,6 +53,7 @@ def _load_instrumentors():
                     "Instrumentation skipped for library %s", entry_point.name
                 )
                 continue
+
             entry_point.load()().instrument()  # type: ignore
             logger.debug("Instrumented %s", entry_point.name)
         except Exception as exc:  # pylint: disable=broad-except

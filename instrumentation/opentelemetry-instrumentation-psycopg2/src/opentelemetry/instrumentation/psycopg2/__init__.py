@@ -40,6 +40,7 @@ API
 """
 
 import typing
+from typing import Collection
 
 import psycopg2
 from psycopg2.extensions import (
@@ -49,7 +50,9 @@ from psycopg2.sql import Composed  # pylint: disable=no-name-in-module
 
 from opentelemetry.instrumentation import dbapi
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.psycopg2.version import __version__
+from opentelemetry.instrumentation.psycopg2.package import __version__
+
+from . import package as pkg
 
 _OTEL_CURSOR_FACTORY_KEY = "_otel_orig_cursor_factory"
 
@@ -63,6 +66,9 @@ class Psycopg2Instrumentor(BaseInstrumentor):
     }
 
     _DATABASE_SYSTEM = "postgresql"
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Integrate with PostgreSQL Psycopg library.

@@ -24,7 +24,7 @@ from opentelemetry import context, trace
 from opentelemetry.instrumentation.propagators import (
     get_global_response_propagator,
 )
-from opentelemetry.instrumentation.pyramid.version import __version__
+from opentelemetry.instrumentation.pyramid.package import __version__
 from opentelemetry.propagate import extract
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.util._time import _time_ns

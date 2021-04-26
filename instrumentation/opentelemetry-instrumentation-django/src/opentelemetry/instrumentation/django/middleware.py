@@ -19,7 +19,7 @@ from typing import Callable
 from django.http import HttpRequest, HttpResponse
 
 from opentelemetry.context import attach, detach
-from opentelemetry.instrumentation.django.version import __version__
+from opentelemetry.instrumentation.django.package import __version__
 from opentelemetry.instrumentation.propagators import (
     get_global_response_propagator,
 )

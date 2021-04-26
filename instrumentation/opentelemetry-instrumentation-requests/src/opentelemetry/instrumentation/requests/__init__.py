@@ -35,6 +35,7 @@ API
 
 import functools
 import types
+from typing import Collection
 
 from requests.models import Response
 from requests.sessions import Session
@@ -42,12 +43,14 @@ from requests.structures import CaseInsensitiveDict
 
 from opentelemetry import context
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.requests.version import __version__
+from opentelemetry.instrumentation.requests.package import __version__
 from opentelemetry.instrumentation.utils import http_status_to_status_code
 from opentelemetry.propagate import inject
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import SpanKind, get_tracer
 from opentelemetry.trace.status import Status
+
+from . import package as pkg
 
 # A key to a context variable to avoid creating duplicate spans when instrumenting
 # both, Session.request and Session.send, since Session.request calls into Session.send
@@ -212,6 +215,9 @@ class RequestsInstrumentor(BaseInstrumentor):
     """An instrumentor for requests
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Instruments requests module

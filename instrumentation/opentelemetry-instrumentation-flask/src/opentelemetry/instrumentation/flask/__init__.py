@@ -48,12 +48,13 @@ API
 """
 
 from logging import getLogger
+from typing import Collection
 
 import flask
 
 import opentelemetry.instrumentation.wsgi as otel_wsgi
 from opentelemetry import context, trace
-from opentelemetry.instrumentation.flask.version import __version__
+from opentelemetry.instrumentation.flask.package import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.propagators import (
     get_global_response_propagator,
@@ -62,6 +63,8 @@ from opentelemetry.propagate import extract
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.util._time import _time_ns
 from opentelemetry.util.http import get_excluded_urls
+
+from . import package as pkg
 
 _logger = getLogger(__name__)
 
@@ -205,6 +208,9 @@ class FlaskInstrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         self._original_flask = flask.Flask

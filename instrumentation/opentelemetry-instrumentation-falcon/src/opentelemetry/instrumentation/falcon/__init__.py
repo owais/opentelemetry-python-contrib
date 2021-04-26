@@ -92,12 +92,13 @@ API
 from functools import partial
 from logging import getLogger
 from sys import exc_info
+from typing import Collection
 
 import falcon
 
 import opentelemetry.instrumentation.wsgi as otel_wsgi
 from opentelemetry import context, trace
-from opentelemetry.instrumentation.falcon.version import __version__
+from opentelemetry.instrumentation.falcon.package import __version__
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.propagators import (
     FuncSetter,
@@ -112,6 +113,8 @@ from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace.status import Status
 from opentelemetry.util._time import _time_ns
 from opentelemetry.util.http import get_excluded_urls, get_traced_request_attrs
+
+from . import package as pkg
 
 _logger = getLogger(__name__)
 
@@ -133,6 +136,9 @@ class FalconInstrumentor(BaseInstrumentor):
 
     See `BaseInstrumentor`
     """
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         self._original_falcon_api = falcon.API

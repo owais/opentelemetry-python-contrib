@@ -65,7 +65,16 @@ from functools import wraps
 from importlib import import_module
 from inspect import isclass
 from pkgutil import iter_modules
-from typing import Callable, Dict, List, MutableMapping, Sequence, Type, Union
+from typing import (
+    Callable,
+    Collection,
+    Dict,
+    List,
+    MutableMapping,
+    Sequence,
+    Type,
+    Union,
+)
 
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import FeatureUnion, Pipeline
@@ -73,9 +82,11 @@ from sklearn.tree import BaseDecisionTree
 from sklearn.utils.metaestimators import _IffHasAttrDescriptor
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
-from opentelemetry.instrumentation.sklearn.version import __version__
+from opentelemetry.instrumentation.sklearn.package import __version__
 from opentelemetry.trace import get_tracer
 from opentelemetry.util.types import Attributes
+
+from . import package as pkg
 
 logger = logging.getLogger(__name__)
 
@@ -360,6 +371,9 @@ class SklearnInstrumentor(BaseInstrumentor):
             self.exclude_classes = tuple(DEFAULT_EXCLUDE_CLASSES)
         else:
             self.exclude_classes = tuple(exclude_classes)
+
+    def instrumentation_dependencies(self) -> Collection[str]:
+        return pkg._instruments
 
     def _instrument(self, **kwargs):
         """Instrument the library, and any additional specified on init."""

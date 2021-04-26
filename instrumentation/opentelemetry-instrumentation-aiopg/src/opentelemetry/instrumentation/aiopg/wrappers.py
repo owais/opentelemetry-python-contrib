@@ -40,7 +40,7 @@ from opentelemetry.instrumentation.aiopg.aiopg_integration import (
     AiopgIntegration,
     get_traced_connection_proxy,
 )
-from opentelemetry.instrumentation.aiopg.version import __version__
+from opentelemetry.instrumentation.aiopg.package import __version__
 from opentelemetry.instrumentation.utils import unwrap
 from opentelemetry.trace import TracerProvider
 

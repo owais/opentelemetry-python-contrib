@@ -6,10 +6,22 @@ on:
     - 'release/*'
   pull_request:
 env:
-  CORE_REPO_SHA: 25b6746af2eac3a3ca72ab91d332cf8d317f9540
+  CORE_REPO_SHA: 32baf0672d3631e6c99e69502a5d5ffa81f610d3
 
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      build_matrix: ${{ steps.splittests.outputs.matrix }}
+    steps:
+      - name: Checkout Contrib Repo @ SHA - ${{ github.sha }}
+        uses: actions/checkout@v2
+      - name: Prepare test matrices
+        id: splittests
+        #run: ./.github/workflows/scripts/setup_tests.sh
+        run: ./scripts/eachdist.py github_actions_matrix
   build:
+    needs: [setup]
     env:
       # We use these variables to convert between tox and GHA version literals
       py36: 3.6
@@ -18,13 +30,15 @@ jobs:
       py39: 3.9
       pypy3: pypy3
       RUN_MATRIX_COMBINATION: ${{ matrix.python-version }}-${{ matrix.package }}-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: "ubuntu-latest"
     strategy:
       fail-fast: false  # ensures the entire test matrix is run, even if one permutation fails
-      matrix:
-        python-version: [ py36, py37, py38, py39, pypy3 ]
-        package: ["instrumentation", "exporter", "sdkextension", "propagator"]
-        os: [ ubuntu-latest ]
+      matrix: ${{ fromJson(needs.setup.outputs.build_matrix) }}
+      #matrix:
+      #  python-version: [ py36, py37, py38, py39, pypy3 ]
+      #  package: ["instrumentation", "exporter", "sdkextension", "propagator"]
+      #  os: [ ubuntu-latest ]
     steps:
       - name: Checkout Contrib Repo @ SHA - ${{ github.sha }}
         uses: actions/checkout@v2
@@ -34,10 +48,19 @@ jobs:
           repository: open-telemetry/opentelemetry-python
           ref: ${{ env.CORE_REPO_SHA }}
           path: opentelemetry-python-core
-      - name: Set up Python ${{ env[matrix.python-version] }}
+
+      - name: Get Python version from matrix
+        id: python
+        run: echo "::set-output name=version::$(cut -d'-' -f1 <<<'$${{ matrix.test }}')"
+
+      - name: Get Package name from matrix
+        id: package 
+        run: echo "::set-output name=name::$(cut -d'-' -f3- <<<'$${{ matrix.test }}')"
+
+      - name: Set up Python ${{ env[steps.python.outputs.version] }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ env[matrix.python-version] }}
+          python-version: ${{ env[steps.python.outputs.version] }}
       - name: Install tox
         run: pip install -U tox-factor
       - name: Cache tox environment
@@ -45,19 +68,19 @@ jobs:
         uses: actions/cache@v2
         with:
           path: .tox
-          key: tox-cache-${{ env.RUN_MATRIX_COMBINATION }}-${{ hashFiles('tox.ini', 'dev-requirements.txt') }}
+          key: tox-cache-${{ matrix.test }}-${{ hashFiles('tox.ini', 'dev-requirements.txt') }}
       - name: run tox
-        run: tox -f ${{ matrix.python-version }}-${{ matrix.package }} -- --benchmark-json=${{ env.RUN_MATRIX_COMBINATION }}-benchmark.json
+        run: tox -f ${{ steps.python.outputs.version}} -- --benchmark-json=${{ steps.python.outputs.version}}-benchmark.json
       - name: Find and merge benchmarks
         # TODO: Add at least one benchmark to every package type to remove this (#249)
-        if: matrix.package == 'sdkextension'
+        if: ${{ steps.package.outputs.name }} == 'sdkextension'
         run: >-
           jq -s '.[0].benchmarks = ([.[].benchmarks] | add)
           | if .[0].benchmarks == null then null else .[0] end'
           **/**/tests/*${{ matrix.package }}*-benchmark.json > output.json
       - name: Report on benchmark results
         # TODO: Add at least one benchmark to every package type to remove this (#249)
-        if: matrix.package == 'sdkextension'
+        if: ${{ steps.package.outputs.name }} == 'sdkextension'
         uses: rhysd/github-action-benchmark@v1
         with:
           name: OpenTelemetry Python Benchmarks - Python ${{ env[matrix.python-version ]}} - ${{ matrix.package }}
@@ -73,6 +96,7 @@ jobs:
           gh-pages-branch: gh-pages
           benchmark-data-dir-path: benchmarks
   misc:
+    if: ${{ false }}
     strategy:
       fail-fast: false
       matrix:

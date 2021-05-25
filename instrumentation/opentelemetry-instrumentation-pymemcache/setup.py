@@ -18,6 +18,8 @@
 
 
 import os
+import distutils.cmd
+import json
 from configparser import ConfigParser
 
 import setuptools
@@ -66,6 +68,32 @@ for dep in extras_require["instruments"]:
 
 extras_require["test"] = test_deps
 
+
+class JSONMetadataCommand(distutils.cmd.Command):
+
+    description = (
+        "print out package metadata as JSON. This is used by OpenTelemetry dev scripts to ",
+        "auto-generate code in other places",
+    )
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        metadata = {
+            "name": config["metadata"]["name"],
+            "version": PACKAGE_INFO["__version__"],
+            "instruments": PACKAGE_INFO["_instruments"],
+        }
+        print(json.dumps(metadata))
+
+
 setuptools.setup(
-    version=PACKAGE_INFO["__version__"], extras_require=extras_require
+    cmdclass={"meta": JSONMetadataCommand,},
+    version=PACKAGE_INFO["__version__"],
+    extras_require=extras_require,
 )

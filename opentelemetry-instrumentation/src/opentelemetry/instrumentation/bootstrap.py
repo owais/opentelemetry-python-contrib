@@ -21,6 +21,7 @@ import sys
 from logging import getLogger
 
 from opentelemetry.instrumentation.version import __version__ as version
+from opentelemetry.instrumentation.bootstrap_gen import libraries, default_instrumentations
 
 logger = getLogger(__file__)
 
@@ -34,77 +35,77 @@ logger = getLogger(__file__)
 # the libraries their application uses to figure which one can be
 # instrumented.
 # NOTE: system-metrics is not to be included.
-def all_instrumentations():
-    pkg_instrumentation_map = {
-        "aiohttp-client": "opentelemetry-instrumentation-aiohttp-client",
-        "aiopg": "opentelemetry-instrumentation-aiopg",
-        "asyncpg": "opentelemetry-instrumentation-asyncpg",
-        "boto": "opentelemetry-instrumentation-boto",
-        "botocore": "opentelemetry-instrumentation-botocore",
-        "celery": "opentelemetry-instrumentation-celery",
-        "dbapi": "opentelemetry-instrumentation-dbapi",
-        "django": "opentelemetry-instrumentation-django",
-        "elasticsearch": "opentelemetry-instrumentation-elasticsearch",
-        "falcon": "opentelemetry-instrumentation-falcon",
-        "fastapi": "opentelemetry-instrumentation-fastapi",
-        "flask": "opentelemetry-instrumentation-flask",
-        "grpc": "opentelemetry-instrumentation-grpc",
-        "jinja2": "opentelemetry-instrumentation-jinja2",
-        "mysql": "opentelemetry-instrumentation-mysql",
-        "psycopg2": "opentelemetry-instrumentation-psycopg2",
-        "pymemcache": "opentelemetry-instrumentation-pymemcache",
-        "pymongo": "opentelemetry-instrumentation-pymongo",
-        "pymysql": "opentelemetry-instrumentation-pymysql",
-        "pyramid": "opentelemetry-instrumentation-pyramid",
-        "redis": "opentelemetry-instrumentation-redis",
-        "requests": "opentelemetry-instrumentation-requests",
-        "sklearn": "opentelemetry-instrumentation-sklearn",
-        "sqlalchemy": "opentelemetry-instrumentation-sqlalchemy",
-        "sqlite3": "opentelemetry-instrumentation-sqlite3",
-        "starlette": "opentelemetry-instrumentation-starlette",
-        "tornado": "opentelemetry-instrumentation-tornado",
-        "urllib": "opentelemetry-instrumentation-urllib",
-    }
-    for pkg, instrumentation in pkg_instrumentation_map.items():
-        pkg_instrumentation_map[pkg] = "{0}=={1}".format(
-            instrumentation, version
-        )
-    return pkg_instrumentation_map
+#def all_instrumentations():
+#    pkg_instrumentation_map = {
+#        "aiohttp-client": "opentelemetry-instrumentation-aiohttp-client",
+#        "aiopg": "opentelemetry-instrumentation-aiopg",
+#        "asyncpg": "opentelemetry-instrumentation-asyncpg",
+#        "boto": "opentelemetry-instrumentation-boto",
+#        "botocore": "opentelemetry-instrumentation-botocore",
+#        "celery": "opentelemetry-instrumentation-celery",
+#        "dbapi": "opentelemetry-instrumentation-dbapi",
+#        "django": "opentelemetry-instrumentation-django",
+#        "elasticsearch": "opentelemetry-instrumentation-elasticsearch",
+#        "falcon": "opentelemetry-instrumentation-falcon",
+#        "fastapi": "opentelemetry-instrumentation-fastapi",
+#        "flask": "opentelemetry-instrumentation-flask",
+#        "grpc": "opentelemetry-instrumentation-grpc",
+#        "jinja2": "opentelemetry-instrumentation-jinja2",
+#        "mysql": "opentelemetry-instrumentation-mysql",
+#        "psycopg2": "opentelemetry-instrumentation-psycopg2",
+#        "pymemcache": "opentelemetry-instrumentation-pymemcache",
+#        "pymongo": "opentelemetry-instrumentation-pymongo",
+#        "pymysql": "opentelemetry-instrumentation-pymysql",
+#        "pyramid": "opentelemetry-instrumentation-pyramid",
+#        "redis": "opentelemetry-instrumentation-redis",
+#        "requests": "opentelemetry-instrumentation-requests",
+#        "sklearn": "opentelemetry-instrumentation-sklearn",
+#        "sqlalchemy": "opentelemetry-instrumentation-sqlalchemy",
+#        "sqlite3": "opentelemetry-instrumentation-sqlite3",
+#        "starlette": "opentelemetry-instrumentation-starlette",
+#        "tornado": "opentelemetry-instrumentation-tornado",
+#        "urllib": "opentelemetry-instrumentation-urllib",
+#    }
+#    for pkg, instrumentation in pkg_instrumentation_map.items():
+#        pkg_instrumentation_map[pkg] = "{0}=={1}".format(
+#            instrumentation, version
+#        )
+#    return pkg_instrumentation_map
 
 
-instrumentations = all_instrumentations()
+#instrumentations = all_instrumentations()
 
 # relevant instrumentors and tracers to uninstall and check for conflicts for target libraries
-libraries = {
-    "aiohttp-client": ("opentelemetry-instrumentation-aiohttp-client",),
-    "aiopg": ("opentelemetry-instrumentation-aiopg",),
-    "asyncpg": ("opentelemetry-instrumentation-asyncpg",),
-    "boto": ("opentelemetry-instrumentation-boto",),
-    "botocore": ("opentelemetry-instrumentation-botocore",),
-    "celery": ("opentelemetry-instrumentation-celery",),
-    "dbapi": ("opentelemetry-instrumentation-dbapi",),
-    "django": ("opentelemetry-instrumentation-django",),
-    "elasticsearch": ("opentelemetry-instrumentation-elasticsearch",),
-    "falcon": ("opentelemetry-instrumentation-falcon",),
-    "fastapi": ("opentelemetry-instrumentation-fastapi",),
-    "flask": ("opentelemetry-instrumentation-flask",),
-    "grpc": ("opentelemetry-instrumentation-grpc",),
-    "jinja2": ("opentelemetry-instrumentation-jinja2",),
-    "mysql": ("opentelemetry-instrumentation-mysql",),
-    "psycopg2": ("opentelemetry-instrumentation-psycopg2",),
-    "pymemcache": ("opentelemetry-instrumentation-pymemcache",),
-    "pymongo": ("opentelemetry-instrumentation-pymongo",),
-    "pymysql": ("opentelemetry-instrumentation-pymysql",),
-    "pyramid": ("opentelemetry-instrumentation-pyramid",),
-    "redis": ("opentelemetry-instrumentation-redis",),
-    "requests": ("opentelemetry-instrumentation-requests",),
-    "sklearn": ("opentelemetry-instrumentation-sklearn",),
-    "sqlalchemy": ("opentelemetry-instrumentation-sqlalchemy",),
-    "sqlite3": ("opentelemetry-instrumentation-sqlite3",),
-    "starlette": ("opentelemetry-instrumentation-starlette",),
-    "tornado": ("opentelemetry-instrumentation-tornado",),
-    "urllib": ("opentelemetry-instrumentation-urllib",),
-}
+#libraries = {
+#    "aiohttp-client": ("opentelemetry-instrumentation-aiohttp-client",),
+#    "aiopg": ("opentelemetry-instrumentation-aiopg",),
+#    "asyncpg": ("opentelemetry-instrumentation-asyncpg",),
+#    "boto": ("opentelemetry-instrumentation-boto",),
+#    "botocore": ("opentelemetry-instrumentation-botocore",),
+#    "celery": ("opentelemetry-instrumentation-celery",),
+#    "dbapi": ("opentelemetry-instrumentation-dbapi",),
+#    "django": ("opentelemetry-instrumentation-django",),
+#    "elasticsearch": ("opentelemetry-instrumentation-elasticsearch",),
+#    "falcon": ("opentelemetry-instrumentation-falcon",),
+#    "fastapi": ("opentelemetry-instrumentation-fastapi",),
+#    "flask": ("opentelemetry-instrumentation-flask",),
+#    "grpc": ("opentelemetry-instrumentation-grpc",),
+#    "jinja2": ("opentelemetry-instrumentation-jinja2",),
+#    "mysql": ("opentelemetry-instrumentation-mysql",),
+#    "psycopg2": ("opentelemetry-instrumentation-psycopg2",),
+#    "pymemcache": ("opentelemetry-instrumentation-pymemcache",),
+#    "pymongo": ("opentelemetry-instrumentation-pymongo",),
+#    "pymysql": ("opentelemetry-instrumentation-pymysql",),
+#    "pyramid": ("opentelemetry-instrumentation-pyramid",),
+#    "redis": ("opentelemetry-instrumentation-redis",),
+#    "requests": ("opentelemetry-instrumentation-requests",),
+#    "sklearn": ("opentelemetry-instrumentation-sklearn",),
+#    "sqlalchemy": ("opentelemetry-instrumentation-sqlalchemy",),
+#    "sqlite3": ("opentelemetry-instrumentation-sqlite3",),
+#    "starlette": ("opentelemetry-instrumentation-starlette",),
+#    "tornado": ("opentelemetry-instrumentation-tornado",),
+#    "urllib": ("opentelemetry-instrumentation-urllib",),
+#}
 
 
 def _install_package(library, instrumentation):

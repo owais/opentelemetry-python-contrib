@@ -24,7 +24,8 @@ jobs:
       matrix:
         python-version: [ py36, py37, py38, py39, pypy3 ]
         package: ["instrumentation", "exporter", "sdkextension", "propagator"]
-        os: [ ubuntu-latest ]
+        os: [ ubuntu-latest, windows-latest ]
+    if: ${{ matrix.os != 'windows-latest' || matrix.python-version == "3.9" }}
     steps:
       - name: Checkout Contrib Repo @ SHA - ${{ github.sha }}
         uses: actions/checkout@v2
@@ -49,15 +50,17 @@ jobs:
       - name: run tox
         run: tox -f ${{ matrix.python-version }}-${{ matrix.package }} -- --benchmark-json=${{ env.RUN_MATRIX_COMBINATION }}-benchmark.json
       - name: Find and merge benchmarks
+        # TODO: fix and enable on windows
         # TODO: Add at least one benchmark to every package type to remove this (#249)
-        if: matrix.package == 'sdkextension'
+        if: ${{ matrix.package == 'sdkextension' && matrix.os != 'windows-latest' }}
         run: >-
           jq -s '.[0].benchmarks = ([.[].benchmarks] | add)
           | if .[0].benchmarks == null then null else .[0] end'
           **/**/tests/*${{ matrix.package }}*-benchmark.json > output.json
       - name: Report on benchmark results
+        # TODO: fix and enable on windows
         # TODO: Add at least one benchmark to every package type to remove this (#249)
-        if: matrix.package == 'sdkextension'
+        if: ${{ matrix.package == 'sdkextension' && matrix.os != 'windows-latest' }}
         uses: rhysd/github-action-benchmark@v1
         with:
           name: OpenTelemetry Python Benchmarks - Python ${{ env[matrix.python-version ]}} - ${{ matrix.package }}
